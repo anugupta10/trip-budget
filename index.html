@@ -101,6 +101,7 @@ dl{margin:10px 0 0}dt{font-weight:600;margin-top:12px}dd{margin:2px 0 0;color:va
       <p class="note">Suggested amount to save</p>
       <div class="total" id="total">–</div>
       <p class="note" id="perday"></p>
+      <p class="hint" id="datasrc"></p>
 
       <div class="track" aria-hidden="true"><div class="band" id="band"></div><div class="mark" id="mark"></div></div>
       <div class="scale"><span id="lo"></span><span id="mid"></span><span id="hi"></span></div>
@@ -203,6 +204,9 @@ function gauss(r){ return Math.sqrt(-2*Math.log(1-r()))*Math.cos(2*Math.PI*r());
 
 function forecast(dest, origin, incFlights, days, month, year, style, travelers){
   const d = DATA[dest], years = Math.max(year-BASE_YEAR,0);
+  const act = d.actual || {}; let known = 1, y0 = BASE_YEAR+1;
+  while(y0<=year && act[y0]!=null){ known *= 1+act[y0]/100; y0++; }
+  const simYears = Math.max(year-y0+1,0);
   const h = d.infl;
   const mu = (0.5*mean(h)+0.5*mean(h.slice(-3)))/100, sd = stdev(h)/100;
   const sc = STYLE[style] * travelers, m = month-1;
@@ -215,10 +219,59 @@ function forecast(dest, origin, incFlights, days, month, year, style, travelers)
   };
   const baseTotal = Object.values(base).reduce((s,x)=>s+x,0);
   const r = rng(42), factors = [];
-  for(let i=0;i<N_SIMS;i++){ let f=1; for(let y=0;y<years;y++) f*=1+mu+sd*gauss(r); factors.push(f); }
+  for(let i=0;i<N_SIMS;i++){ let f=known; for(let y=0;y<simYears;y++) f*=1+mu+sd*gauss(r); factors.push(f); }
   factors.sort((a,b)=>a-b);
   const fExp = mean(factors);
   return {base, baseTotal, fExp, p10:baseTotal*factors[Math.floor(.1*(N_SIMS-1))], p90:baseTotal*factors[Math.floor(.9*(N_SIMS-1))], mu, sd, years};
+}
+
+// World Bank country codes for the live inflation feed
+const ISO = {Thailand:"THA",Vietnam:"VNM",Indonesia:"IDN",Cambodia:"KHM",Malaysia:"MYS",Philippines:"PHL",India:"IND",Nepal:"NPL",Japan:"JPN","South Korea":"KOR",China:"CHN",Morocco:"MAR",Jordan:"JOR",Portugal:"PRT",Spain:"ESP",Italy:"ITA",Greece:"GRC",Croatia:"HRV",Germany:"DEU",France:"FRA","United Kingdom":"GBR",Mexico:"MEX","Costa Rica":"CRI",Colombia:"COL",Peru:"PER",Ecuador:"ECU",Bolivia:"BOL",Chile:"CHL",Brazil:"BRA",Australia:"AUS","New Zealand":"NZL","South Africa":"ZAF",Kenya:"KEN",Tanzania:"TZA"};
+let dataSrc = "Checking for the latest inflation data…";
+
+function parseWB(json){
+  const src = {};
+  ((json && json[1]) || []).forEach(r=>{
+    if(r.value==null) return;
+    (src[r.countryiso3code] = src[r.countryiso3code] || {})[+r.date] = r.value;
+  });
+  return src;
+}
+
+function applyInflation(src){
+  let latest = 0, n = 0;
+  for(const [name,iso] of Object.entries(ISO)){
+    const s = src[iso]; if(!s) continue;
+    const yrs = Object.keys(s).map(Number).sort((a,b)=>a-b);
+    if(yrs.length<5) continue;
+    const use = yrs.slice(-10);
+    DATA[name].infl = use.map(y=>s[y]);
+    DATA[name].actual = {};
+    use.forEach(y=>{ if(y>BASE_YEAR) DATA[name].actual[y] = s[y]; });
+    latest = Math.max(latest, use[use.length-1]); n++;
+  }
+  return {n, latest};
+}
+
+async function loadInflation(){
+  try{
+    let src = null;
+    try{ const c = JSON.parse(localStorage.getItem("wbInfl")||"null"); if(c && Date.now()-c.t < 6048e5) src = c.data; }catch(e){}
+    if(!src){
+      const ctl = new AbortController(), to = setTimeout(()=>ctl.abort(), 8000), yr = new Date().getFullYear();
+      const url = `https://api.worldbank.org/v2/country/${Object.values(ISO).join(";")}/indicator/FP.CPI.TOTL.ZG?format=json&per_page=2000&date=${yr-11}:${yr}`;
+      const res = await fetch(url,{signal:ctl.signal}); clearTimeout(to);
+      if(!res.ok) throw new Error("HTTP "+res.status);
+      src = parseWB(await res.json());
+      try{ localStorage.setItem("wbInfl", JSON.stringify({t:Date.now(),data:src})); }catch(e){}
+    }
+    const {n,latest} = applyInflation(src);
+    if(n<10) throw new Error("not enough data");
+    dataSrc = `Inflation data: live from the World Bank, up to ${latest}.`;
+  }catch(e){
+    dataSrc = "Inflation data: built-in estimates up to 2024 (couldn’t reach the World Bank).";
+  }
+  render();
 }
 
 let style = "budget";
@@ -233,6 +286,7 @@ function render(){
   const month=+$("month").value, year=Math.max(BASE_YEAR,+$("year").value||BASE_YEAR), buf=+$("buf").value/100;
   $("bufv").textContent = Math.round(buf*100);
   $("stylehint").textContent = STYLE_DESC[style];
+  $("datasrc").textContent = dataSrc;
   const f = forecast(dest,origin,incFl,days,month,year,style,trav);
   const expected = f.baseTotal*f.fExp, buffer = expected*buf, target = f.p90 + f.p90*buf;
 
@@ -277,6 +331,7 @@ document.querySelectorAll("#style button").forEach(b=>b.addEventListener("click"
 }));
 ["dest","orig","fl","days","trav","month","year","buf"].forEach(id=>$(id).addEventListener("input",render));
 render();
+loadInflation();
 </script>
 </body>
 </html>

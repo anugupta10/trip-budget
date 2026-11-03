@@ -62,6 +62,13 @@ h2{font-size:1.05rem;margin:26px 0 10px}
 details{margin-top:20px;border:1px solid var(--line);border-radius:10px;padding:12px 14px}
 summary{cursor:pointer;font-weight:600}
 dl{margin:10px 0 0}dt{font-weight:600;margin-top:12px}dd{margin:2px 0 0;color:var(--muted);font-size:.92rem}
+.news{margin-top:20px}
+.news h2{margin:0 0 6px;font-size:1.35rem}
+.nlrow{display:flex;gap:10px;flex-wrap:wrap;margin-top:14px}
+.nlrow input{flex:1 1 240px;width:auto}
+.btn{font:inherit;font-weight:600;background:var(--accent);color:var(--onaccent);border:0;border-radius:8px;padding:10px 22px;cursor:pointer}
+.sr{position:absolute;left:-9999px;width:1px;height:1px;overflow:hidden}
+.news a{color:var(--accent)}
 .foot{color:var(--muted);font-size:.82rem;margin-top:22px}
 @media(prefers-reduced-motion:reduce){.stack div{transition:none}}
 </style>
@@ -139,6 +146,20 @@ dl{margin:10px 0 0}dt{font-weight:600;margin-top:12px}dd{margin:2px 0 0;color:va
       </details>
     </section>
   </div>
+  <section class="panel news" id="news" hidden aria-labelledby="newsh">
+    <h2 id="newsh">Subscribe for Data-Driven Travel Hacks</h2>
+    <p class="note">Get tips on the best months to travel, which destinations are getting pricier, and how to stretch your budget.</p>
+    <form id="nl" method="POST" target="_blank">
+      <div class="nlrow">
+        <label for="nlemail" class="sr">Email address</label>
+        <input id="nlemail" name="email" type="email" required placeholder="you@example.com" autocomplete="email">
+        <input type="hidden" name="source" value="subscribe-page">
+        <button class="btn" type="submit">Subscribe</button>
+      </div>
+      <p class="hint" id="nlmsg" role="status">Free, and you can unsubscribe anytime. <a id="nllink" target="_blank" rel="noopener">Prefer to subscribe on Substack?</a></p>
+    </form>
+  </section>
+
   <p class="foot">This is an estimate, not a quote. Costs, inflation and flight fares are approximate averages in US dollars, so real prices will vary. The range reflects inflation uncertainty only, not exchange rates or your own spending habits.</p>
 </main>
 
@@ -330,6 +351,15 @@ document.querySelectorAll("#style button").forEach(b=>b.addEventListener("click"
   render();
 }));
 ["dest","orig","fl","days","trav","month","year","buf"].forEach(id=>$(id).addEventListener("input",render));
+
+// Newsletter: set your Substack publication name here (the part before .substack.com), e.g. "wandercost"
+const SUBSTACK = "anugupta91";
+if(/^[a-z0-9-]+$/i.test(SUBSTACK)){
+  const base = `https://${SUBSTACK}.substack.com`;
+  $("nl").action = base + "/api/v1/free?nojs=true"; $("nllink").href = base + "/subscribe"; $("news").hidden = false;
+  $("nl").addEventListener("submit", ()=>{ $("nlmsg").textContent = "Almost done! Finish confirming in the Substack tab that just opened."; });
+}
+
 render();
 loadInflation();
 </script>

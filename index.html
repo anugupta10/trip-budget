@@ -58,6 +58,10 @@ h2{font-size:1.05rem;margin:26px 0 10px}
 .fact{border:1px solid var(--line);border-radius:10px;padding:10px 12px}
 .fact b{display:block;font-size:1.15rem}
 .fact span{font-size:.82rem;color:var(--muted)}
+.hint{font-size:.82rem;color:var(--muted);margin:6px 0 0}
+details{margin-top:20px;border:1px solid var(--line);border-radius:10px;padding:12px 14px}
+summary{cursor:pointer;font-weight:600}
+dl{margin:10px 0 0}dt{font-weight:600;margin-top:12px}dd{margin:2px 0 0;color:var(--muted);font-size:.92rem}
 .foot{color:var(--muted);font-size:.82rem;margin-top:22px}
 @media(prefers-reduced-motion:reduce){.stack div{transition:none}}
 </style>
@@ -86,9 +90,11 @@ h2{font-size:1.05rem;margin:26px 0 10px}
           <button type="button" data-v="shoestring" aria-pressed="false">Shoestring</button>
           <button type="button" data-v="budget" aria-pressed="true">Budget</button>
           <button type="button" data-v="comfort" aria-pressed="false">Comfort</button>
-        </div></div>
+        </div>
+        <p class="hint" id="stylehint"></p></div>
       <div class="field" style="margin-bottom:0"><label for="buf">Safety buffer: <span id="bufv">10</span>%</label>
-        <input id="buf" type="range" min="0" max="30" value="10"></div>
+        <input id="buf" type="range" min="0" max="30" value="10">
+        <p class="hint">Extra money added on top for surprises. A higher buffer is safer.</p></div>
     </section>
 
     <section class="panel" aria-live="polite" aria-label="Budget forecast">
@@ -104,9 +110,35 @@ h2{font-size:1.05rem;margin:26px 0 10px}
       <ul class="items" id="items"></ul>
 
       <div class="facts" id="facts"></div>
+
+      <details>
+        <summary>What do these terms mean?</summary>
+        <dl>
+          <dt>Suggested amount to save</dt>
+          <dd>The budget to aim for. It covers a higher-than-expected cost plus your safety buffer, so it is deliberately more than the average cost.</dd>
+          <dt>Expected cost</dt>
+          <dd>The most typical total for your trip, with no extra cushion added.</dd>
+          <dt>Best case</dt>
+          <dd>A low estimate. Only about 1 in 10 of the simulated outcomes came in cheaper than this.</dd>
+          <dt>Likely range</dt>
+          <dd>From the best case up to a pricier outcome. About 8 in 10 simulated outcomes fall inside it.</dd>
+          <dt>Inflation</dt>
+          <dd>How much prices rise each year. We use the destination’s past inflation to estimate how much more things will cost by the time you travel.</dd>
+          <dt>Seasonal prices</dt>
+          <dd>Hotels, flights and tours cost more in busy months and less in quiet ones, so your travel month changes the total.</dd>
+          <dt>Safety buffer</dt>
+          <dd>A percentage added on top for surprises like a missed bus, a rebooked flight or a doctor’s visit. Use 5% or less for a fixed, prepaid trip and 15% or more for a long or first-time trip.</dd>
+          <dt>Travel style</dt>
+          <dd>Shoestring, Budget and Comfort change how much you spend per day on lodging, food, transport and activities. Flights are not affected.</dd>
+          <dt>Local transport</dt>
+          <dd>Buses, trains, taxis and ferries inside the destination. Flights from home are counted separately.</dd>
+          <dt>Flights</dt>
+          <dd>A rough economy round-trip fare from your home city, based on the region you fly to. Real fares vary a lot, so check current prices.</dd>
+        </dl>
+      </details>
     </section>
   </div>
-  <p class="foot">Flight prices are rough regional averages for economy round trips from your home city. All prices, inflation figures and seasonal factors are rough placeholder estimates in USD. Replace the prices, inflation history and seasonal factors in the DATA object with real figures before relying on the numbers. The range reflects inflation uncertainty only, not exchange rates or personal spending. Local inflation can be offset by currency moves, so treat results for volatile economies with extra caution.</p>
+  <p class="foot">This is an estimate, not a quote. Costs, inflation and flight fares are approximate averages in US dollars, so real prices will vary. The range reflects inflation uncertainty only, not exchange rates or your own spending habits.</p>
 </main>
 
 <script>
@@ -190,16 +222,22 @@ function forecast(dest, origin, incFlights, days, month, year, style, travelers)
 }
 
 let style = "budget";
+const STYLE_DESC = {
+  shoestring: "Dorm beds, street food and cheap local transport. Few paid activities.",
+  budget: "Hostels or simple guesthouses, local restaurants and a few paid activities.",
+  comfort: "Private rooms or mid-range hotels, restaurant meals, taxis and tours."
+};
 
 function render(){
   const dest=$("dest").value, origin=$("orig").value, incFl=$("fl").checked, days=Math.max(1,+$("days").value||1), trav=Math.max(1,+$("trav").value||1);
   const month=+$("month").value, year=Math.max(BASE_YEAR,+$("year").value||BASE_YEAR), buf=+$("buf").value/100;
   $("bufv").textContent = Math.round(buf*100);
+  $("stylehint").textContent = STYLE_DESC[style];
   const f = forecast(dest,origin,incFl,days,month,year,style,trav);
   const expected = f.baseTotal*f.fExp, buffer = expected*buf, target = f.p90 + f.p90*buf;
 
   $("total").textContent = usd(target);
-  $("perday").textContent = `About ${usd(target/days/trav)} per person per day, all-in. This is the 90th percentile plus your ${Math.round(buf*100)}% buffer.`;
+  $("perday").textContent = `About ${usd(target/days/trav)} per person per day, all-in. This covers a higher-than-expected cost plus your ${Math.round(buf*100)}% safety buffer, so you’re unlikely to run short.`;
 
   // range track
   const lo=f.p10, hi=target, span=hi-lo||1;

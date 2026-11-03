@@ -62,16 +62,28 @@ h2{font-size:1.05rem;margin:26px 0 10px}
 details{margin-top:20px;border:1px solid var(--line);border-radius:10px;padding:12px 14px}
 summary{cursor:pointer;font-weight:600}
 dl{margin:10px 0 0}dt{font-weight:600;margin-top:12px}dd{margin:2px 0 0;color:var(--muted);font-size:.92rem}
+.lk{display:inline-block;margin:0 10px 10px 0;padding:10px 16px;border:1px solid var(--accent);border-radius:8px;color:var(--accent);text-decoration:none;font-weight:600}
+.lk:hover{background:var(--accent);color:var(--onaccent)}
+.lk[hidden]{display:none}
 .news{margin-top:20px}
 .news h2{margin:0 0 6px;font-size:1.35rem}
 .nlrow{display:flex;gap:10px;flex-wrap:wrap;margin-top:14px}
 .nlrow input{flex:1 1 240px;width:auto}
-.btn{font:inherit;font-weight:600;background:var(--accent);color:var(--onaccent);border:0;border-radius:8px;padding:10px 22px;cursor:pointer}
+.btn{display:inline-block;text-decoration:none;font:inherit;font-weight:600;background:var(--accent);color:var(--onaccent);border:0;border-radius:8px;padding:10px 22px;cursor:pointer}
 .sr{position:absolute;left:-9999px;width:1px;height:1px;overflow:hidden}
 .news a{color:var(--accent)}
 .foot{color:var(--muted);font-size:.82rem;margin-top:22px}
 @media(prefers-reduced-motion:reduce){.stack div{transition:none}}
 </style>
+<script nowprocket data-noptimize="1" data-cfasync="false" data-wpfc-render="false" seraph-accel-crit="1" data-no-defer="1" data-cmp-ab="2">
+  (function () {
+    var script = document.createElement("script");
+    script.async = 1;
+    script.setAttribute("data-cmp-ab","2");
+    script.src = 'https://emrldtp.cc/NTk1MTUw.js?t=595150';
+    document.head.appendChild(script);
+  })();
+</script>
 </head>
 <body>
 <main>
@@ -119,6 +131,11 @@ dl{margin:10px 0 0}dt{font-weight:600;margin-top:12px}dd{margin:2px 0 0;color:va
 
       <div class="facts" id="facts"></div>
 
+      <h2>Check current prices</h2>
+      <p class="hint" style="margin:0 0 12px">Live prices on partner sites can differ from this estimate. Dates are set to the 15th of your travel month, so adjust them there.</p>
+      <a class="lk" id="lkflights" target="_blank" rel="sponsored noopener"></a><a class="lk" id="lkhotels" target="_blank" rel="sponsored noopener"></a>
+      <p class="hint">Some links are affiliate links. If you book through them, we may earn a commission at no extra cost to you.</p>
+
       <details>
         <summary>What do these terms mean?</summary>
         <dl>
@@ -156,11 +173,13 @@ dl{margin:10px 0 0}dt{font-weight:600;margin-top:12px}dd{margin:2px 0 0;color:va
         <input type="hidden" name="source" value="subscribe-page">
         <button class="btn" type="submit">Subscribe</button>
       </div>
-      <p class="hint" id="nlmsg" role="status">Free, and you can unsubscribe anytime. <a id="nllink" target="_blank" rel="noopener">Prefer to subscribe on Substack?</a></p>
+      <p class="hint" id="nlmsg" role="status">Free, and you can unsubscribe anytime. After subscribing, check your inbox, spam or Promotions folder for the confirmation email. <a id="nllink" target="_blank" rel="noopener">Prefer to subscribe on Substack?</a></p>
     </form>
   </section>
 
   <p class="foot">This is an estimate, not a quote. Costs, inflation and flight fares are approximate averages in US dollars, so real prices will vary. The range reflects inflation uncertainty only, not exchange rates or your own spending habits.</p>
+  <p class="foot">Affiliate disclosure: some links on this site are affiliate links. If you book through them, we may earn a commission at no extra cost to you.</p>
+  <p class="foot">Privacy: this site uses a script from Travelpayouts, our travel affiliate partner, which may use cookies or similar technology to track clicks on partner links.</p>
 </main>
 
 <script>
@@ -295,6 +314,21 @@ async function loadInflation(){
   render();
 }
 
+// Airport codes for the traveler's home city, and the main gateway city for each destination: [airport, city, hotel search term?]
+const AIRPORT = {Delhi:"DEL",Mumbai:"BOM",Bengaluru:"BLR",Singapore:"SIN",Bangkok:"BKK",Tokyo:"TYO","Hong Kong":"HKG",London:"LON",Frankfurt:"FRA",Madrid:"MAD","New York":"NYC","Los Angeles":"LAX",Toronto:"YTO","Sao Paulo":"SAO",Dubai:"DXB",Johannesburg:"JNB",Sydney:"SYD"};
+const GATE = {Thailand:["BKK","Bangkok"],Vietnam:["HAN","Hanoi"],Indonesia:["DPS","Bali"],Cambodia:["PNH","Phnom Penh"],Malaysia:["KUL","Kuala Lumpur"],Philippines:["MNL","Manila"],India:["DEL","Delhi"],Nepal:["KTM","Kathmandu"],Japan:["TYO","Tokyo"],"South Korea":["SEL","Seoul"],China:["BJS","Beijing"],Morocco:["CMN","Casablanca"],Jordan:["AMM","Amman"],Portugal:["LIS","Lisbon"],Spain:["MAD","Madrid"],Italy:["ROM","Rome"],Greece:["ATH","Athens"],Croatia:["ZAG","Zagreb"],Germany:["BER","Berlin"],France:["PAR","Paris"],"United Kingdom":["LON","London"],Mexico:["MEX","Mexico City"],"Costa Rica":["SJO","San Jose"],Colombia:["BOG","Bogota"],Peru:["LIM","Lima"],Ecuador:["UIO","Quito"],Bolivia:["LPB","La Paz"],Chile:["SCL","Santiago"],Brazil:["RIO","Rio de Janeiro"],Australia:["SYD","Sydney"],"New Zealand":["AKL","Auckland"],"South Africa":["CPT","Cape Town"],Kenya:["NBO","Nairobi"],Tanzania:["JRO","Kilimanjaro","Arusha"]};
+
+function tripLinks(dest, origin, days, month, year, trav){
+  const [code,city,hotel] = GATE[dest], o = AIRPORT[origin];
+  const dep = new Date(Date.UTC(year, month-1, 15)), ret = new Date(dep.getTime()+days*864e5);
+  const t = new Date(), future = dep.getTime() > Date.UTC(t.getFullYear(), t.getMonth(), t.getDate());
+  const p2 = n=>String(n).padStart(2,"0"), dm = d=>p2(d.getUTCDate())+p2(d.getUTCMonth()+1), iso = d=>d.toISOString().slice(0,10);
+  const flights = o===code ? null : future ? `https://www.aviasales.com/search/${o}${dm(dep)}${code}${dm(ret)}${Math.min(trav,9)}` : "https://www.aviasales.com/";
+  let q = `ss=${encodeURIComponent(hotel||city)}&group_adults=${trav}&no_rooms=${Math.ceil(trav/2)}&group_children=0`;
+  if(future) q += `&checkin=${iso(dep)}&checkout=${iso(ret)}`;
+  return {flights, hotels:`https://www.booking.com/searchresults.html?${q}`, flightCity:city, hotelCity:hotel||city};
+}
+
 let style = "budget";
 const STYLE_DESC = {
   shoestring: "Dorm beds, street food and cheap local transport. Few paid activities.",
@@ -336,6 +370,10 @@ function render(){
     ...(incFl?[[usd(f.base.flight*f.fExp), "Round-trip flights from "+origin+" for "+trav+" traveler"+(trav>1?"s":"")]]:[]),
     [MONTHS[month-1], "Seasonal prices applied to lodging, activities and flights"]
   ].map(([b,s])=>`<div class="fact"><b>${b}</b><span>${s}</span></div>`).join("");
+  const L = tripLinks(dest, origin, days, month, year, trav);
+  $("lkflights").hidden = !L.flights;
+  if(L.flights){ $("lkflights").href = L.flights; $("lkflights").textContent = `Search flights to ${L.flightCity}`; }
+  $("lkhotels").href = L.hotels; $("lkhotels").textContent = `Find hotels in ${L.hotelCity}`;
 }
 
 // setup

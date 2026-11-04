@@ -194,7 +194,7 @@ dl{margin:10px 0 0}dt{font-weight:600;margin-top:12px}dd{margin:2px 0 0;color:va
 
   <p class="foot">This is an estimate, not a quote. Costs, inflation and flight fares are approximate averages in US dollars, so real prices will vary. The range reflects inflation uncertainty only, not exchange rates or your own spending habits. Seasonal patterns for Japan come from the Japan National Tourism Organization’s 2025 monthly visitor numbers; other countries use general regional patterns.</p>
   <p class="foot">Affiliate disclosure: some links on this site are affiliate links. If you book through them, we may earn a commission at no extra cost to you.</p>
-  <p class="foot">Privacy: this site uses a script from Travelpayouts, our travel affiliate partner, which may use cookies or similar technology to track clicks on partner links.</p>
+  <p class="foot" id="privfoot">Privacy: this site uses a script from Travelpayouts, our travel affiliate partner, which may use cookies or similar technology to track clicks on partner links.</p>
 </main>
 
 <script>
@@ -422,6 +422,18 @@ if(/^[a-z0-9-]+$/i.test(SUBSTACK)){
   const base = `https://${SUBSTACK}.substack.com`;
   $("nl").action = base + "/api/v1/free?nojs=true"; $("nllink").href = base + "/subscribe"; $("news").hidden = false;
   $("nl").addEventListener("submit", ()=>{ $("nlmsg").textContent = "Almost done! Finish confirming in the Substack tab that just opened."; });
+}
+
+// Visitor analytics (Umami Cloud, no cookies). Paste your Umami website ID between the quotes to switch it on; leave it empty to keep it off.
+const UMAMI_ID = "0242bc2d-04f3-426a-8e2a-11743b913e43";
+const track = (name,data)=>{ try{ if(window.umami) window.umami.track(name,data); }catch(e){} };
+if(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(UMAMI_ID)){
+  const s = document.createElement("script"); s.defer = true; s.src = "https://cloud.umami.is/script.js"; s.setAttribute("data-website-id", UMAMI_ID); document.head.appendChild(s);
+  $("privfoot").textContent += " We also use Umami, a cookie-free analytics service, to count visits.";
+  let used = false;
+  ["dest","orig","days","trav","month","year","buf"].forEach(id=>$(id).addEventListener("change",()=>{ if(!used){ used = true; track("calculator_used"); } }));
+  [["lkflights","click_flights"],["lkhotels","click_hotels"],["lkact","click_activities"]].forEach(([id,ev])=>$(id).addEventListener("click",()=>track(ev,{destination:$("dest").value})));
+  $("nl").addEventListener("submit",()=>track("subscribe_submit"));
 }
 
 render();

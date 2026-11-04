@@ -62,6 +62,15 @@ h2{font-size:1.05rem;margin:26px 0 10px}
 details{margin-top:20px;border:1px solid var(--line);border-radius:10px;padding:12px 14px}
 summary{cursor:pointer;font-weight:600}
 dl{margin:10px 0 0}dt{font-weight:600;margin-top:12px}dd{margin:2px 0 0;color:var(--muted);font-size:.92rem}
+.bars{display:grid;grid-template-columns:repeat(12,1fr);gap:6px;height:190px;margin-top:8px}
+.bar{display:flex;flex-direction:column;min-width:0}
+.bar .col{flex:1;display:flex;align-items:flex-end}
+.bar i{display:block;width:100%;border-radius:6px 6px 0 0;background:var(--muted);opacity:.45}
+.bar.min i{background:var(--c2);opacity:1}.bar.max i{background:var(--c4);opacity:1}.bar.sel i{background:var(--accent);opacity:1}
+.bar span{text-align:center;font-size:.78rem;color:var(--muted);margin-top:4px}
+.bar.sel span{color:var(--ink);font-weight:700}
+.dot{display:inline-block;width:10px;height:10px;border-radius:3px;margin-right:5px}
+.lg{display:inline-block;white-space:nowrap;margin:2px 14px 2px 0}
 .lk{display:inline-block;margin:0 10px 10px 0;padding:10px 16px;border:1px solid var(--accent);border-radius:8px;color:var(--accent);text-decoration:none;font-weight:600}
 .lk:hover{background:var(--accent);color:var(--onaccent)}
 .lk[hidden]{display:none}
@@ -97,7 +106,7 @@ dl{margin:10px 0 0}dt{font-weight:600;margin-top:12px}dd{margin:2px 0 0;color:va
       <div class="field"><label for="orig">Flying from</label><select id="orig"></select></div>
       <label class="chk"><input id="fl" type="checkbox" checked> Include flights in the budget</label>
       <div class="row">
-        <div class="field"><label for="days">Days</label><input id="days" type="number" min="1" max="365" value="21" inputmode="numeric"></div>
+        <div class="field"><label for="days">Days</label><input id="days" type="number" min="1" max="365" value="10" inputmode="numeric"></div>
         <div class="field"><label for="trav">Travelers</label><input id="trav" type="number" min="1" max="20" value="1" inputmode="numeric"></div>
       </div>
       <div class="row">
@@ -131,6 +140,10 @@ dl{margin:10px 0 0}dt{font-weight:600;margin-top:12px}dd{margin:2px 0 0;color:va
 
       <div class="facts" id="facts"></div>
 
+      <h2>Compare months</h2>
+      <p class="hint" style="margin:0 0 4px" id="cmpnote"></p>
+      <div class="bars" id="bars" role="img" aria-label="Suggested budget for each travel month"></div>
+
       <h2>Check current prices</h2>
       <p class="hint" style="margin:0 0 12px">Live prices on partner sites can differ from this estimate. Dates are set to the 15th of your travel month, so adjust them there.</p>
       <a class="lk" id="lkflights" target="_blank" rel="sponsored noopener"></a><a class="lk" id="lkhotels" target="_blank" rel="sponsored noopener"></a><a class="lk" id="lkact" href="https://klook.tpm.li/1UbnIQr3" target="_blank" rel="sponsored noopener">Book tours and activities</a>
@@ -149,6 +162,8 @@ dl{margin:10px 0 0}dt{font-weight:600;margin-top:12px}dd{margin:2px 0 0;color:va
           <dd>From the best case up to a pricier outcome. About 8 in 10 simulated outcomes fall inside it.</dd>
           <dt>Inflation</dt>
           <dd>How much prices rise each year. We use the destination’s past inflation to estimate how much more things will cost by the time you travel.</dd>
+          <dt>Compare months</dt>
+          <dd>A bar chart of the suggested amount to save for each month of the year, using your destination, trip length and style.</dd>
           <dt>Seasonal prices</dt>
           <dd>Hotels, flights and tours cost more in busy months and less in quiet ones, so your travel month changes the total.</dd>
           <dt>Safety buffer</dt>
@@ -177,7 +192,7 @@ dl{margin:10px 0 0}dt{font-weight:600;margin-top:12px}dd{margin:2px 0 0;color:va
     </form>
   </section>
 
-  <p class="foot">This is an estimate, not a quote. Costs, inflation and flight fares are approximate averages in US dollars, so real prices will vary. The range reflects inflation uncertainty only, not exchange rates or your own spending habits.</p>
+  <p class="foot">This is an estimate, not a quote. Costs, inflation and flight fares are approximate averages in US dollars, so real prices will vary. The range reflects inflation uncertainty only, not exchange rates or your own spending habits. Seasonal patterns for Japan come from the Japan National Tourism Organization’s 2025 monthly visitor numbers; other countries use general regional patterns.</p>
   <p class="foot">Affiliate disclosure: some links on this site are affiliate links. If you book through them, we may earn a commission at no extra cost to you.</p>
   <p class="foot">Privacy: this site uses a script from Travelpayouts, our travel affiliate partner, which may use cookies or similar technology to track clicks on partner links.</p>
 </main>
@@ -187,6 +202,11 @@ const BASE_YEAR = 2024, N_SIMS = 4000;
 const STYLE = {shoestring:.75, budget:1, comfort:1.8};
 const PROFILES = {"seasia":{"lodging":[1.25,1.25,1.1,0.95,0.8,0.8,0.85,0.85,0.8,0.9,1.1,1.3],"activities":[1.1,1.1,1.05,1,0.9,0.9,0.95,0.95,0.9,0.95,1.05,1.15],"flight":[1.2,1.1,1,0.95,0.85,0.85,0.95,0.95,0.85,0.9,1,1.3]},"med":{"lodging":[0.75,0.75,0.85,1,1.1,1.2,1.5,1.55,1.2,0.95,0.8,0.85],"activities":[0.85,0.85,0.9,1,1.05,1.1,1.2,1.2,1.1,1,0.9,0.9],"flight":[0.8,0.8,0.9,1,1.1,1.2,1.4,1.4,1.1,1,0.85,1]},"carib":{"lodging":[1.3,1.3,1.25,1,0.8,0.8,0.9,0.9,0.75,0.85,1,1.35],"activities":[1.15,1.15,1.15,1,0.9,0.9,0.95,0.95,0.85,0.9,1,1.15],"flight":[1.2,1.15,1.15,1,0.85,0.9,1.05,1,0.8,0.85,0.95,1.3]},"sasia":{"lodging":[1.2,1.15,1.05,0.9,0.8,0.75,0.75,0.8,0.9,1.1,1.25,1.3],"activities":[1.1,1.1,1,0.95,0.9,0.85,0.85,0.9,0.95,1.05,1.15,1.2],"flight":[1.2,1.05,1,0.95,0.85,0.8,0.85,0.9,0.95,1.05,1.15,1.35]},"shsum":{"lodging":[1.4,1.35,1.1,0.9,0.8,0.75,0.8,0.8,0.9,1,1.1,1.35],"activities":[1.25,1.2,1.05,0.95,0.85,0.8,0.85,0.85,0.9,1,1.05,1.2],"flight":[1.35,1.25,1,0.9,0.85,0.8,0.9,0.9,0.9,1,1.05,1.4]},"andes":{"lodging":[0.9,0.85,0.85,0.9,1,1.25,1.4,1.35,1.1,0.95,0.85,0.95],"activities":[0.9,0.9,0.9,0.95,1,1.15,1.25,1.25,1.1,1,0.9,0.95],"flight":[1.05,0.9,0.9,0.9,0.95,1.15,1.3,1.2,1,0.95,0.9,1.25]},"eastasia":{"lodging":[0.9,0.9,1.2,1.25,1,0.9,1.05,1.2,0.95,1.1,1.2,1],"activities":[0.95,0.95,1.15,1.15,1,0.95,1.05,1.15,1,1.05,1.1,1],"flight":[1.1,0.95,1.15,1.2,1,0.9,1.05,1.25,0.95,1,1.05,1.2]},"safari":{"lodging":[1.15,0.95,0.85,0.8,0.8,0.95,1.3,1.4,1.3,1.1,0.85,1.1],"activities":[1.1,0.95,0.9,0.85,0.85,0.95,1.25,1.3,1.2,1.05,0.9,1.1],"flight":[1.2,0.95,0.9,0.85,0.85,1,1.3,1.3,1.1,1,0.9,1.3]},"shoulder":{"lodging":[0.85,0.9,1.1,1.25,1.15,0.9,0.85,0.85,1.15,1.3,1.05,0.95],"activities":[0.9,0.95,1.1,1.2,1.1,0.95,0.9,0.9,1.1,1.2,1,0.95],"flight":[0.85,0.85,1,1.15,1.05,1,1.1,1.1,1.05,1.1,0.9,1.1]}};
 // [name, lodging, food, transport, activities, region, seasonProfile, inflation% 2015-2024]
+// Japan: seasonality calibrated from JNTO's 2025 monthly visitor arrivals (thousands).
+// Assumption: prices move more than visitor counts (rooms are limited), so lodging uses index^2 and activities/flights index^1.5.
+const JP_ARR = [3781.2,3258.1,3497.6,3908.9,3693.3,3377.8,3437.0,3428.0,3266.8,3896.3,3518.0,3617.7];
+const JP_MEAN = JP_ARR.reduce((s,x)=>s+x,0)/12;
+PROFILES.japan = {lodging:JP_ARR.map(a=>+((a/JP_MEAN)**2).toFixed(2)), activities:JP_ARR.map(a=>+((a/JP_MEAN)**1.5).toFixed(2)), flight:JP_ARR.map(a=>+((a/JP_MEAN)**1.5).toFixed(2))};
 const ROWS = [
 ["Thailand",14,12,6,8,"SEA","seasia",[-0.9,0.2,0.7,1.1,0.7,-0.8,1.2,6.1,1.2,0.4]],
 ["Vietnam",11,10,6,7,"SEA","seasia",[0.6,2.7,3.5,3.5,2.8,3.2,1.8,3.2,3.3,3.6]],
@@ -196,7 +216,7 @@ const ROWS = [
 ["Philippines",14,10,5,10,"SEA","seasia",[0.7,1.3,2.9,5.2,2.5,2.6,3.9,5.8,6.0,3.3]],
 ["India",12,7,4,6,"SAS","sasia",[4.9,4.5,3.6,3.4,4.8,6.2,5.5,6.7,5.7,5.0]],
 ["Nepal",9,7,4,9,"SAS","sasia",[7.2,9.9,4.5,4.1,4.6,6.1,3.6,6.3,7.7,5.4]],
-["Japan",38,25,12,14,"EAS","eastasia",[0.8,-0.1,0.5,1.0,0.5,0.0,-0.2,2.5,3.3,2.7]],
+["Japan",38,25,12,14,"EAS","japan",[0.8,-0.1,0.5,1.0,0.5,0.0,-0.2,2.5,3.3,2.7]],
 ["South Korea",32,18,8,10,"EAS","eastasia",[0.7,1.0,1.9,1.5,0.4,0.5,2.5,5.1,3.6,2.3]],
 ["China",24,12,6,10,"EAS","eastasia",[1.4,2.0,1.6,2.1,2.9,2.5,0.9,2.0,0.2,0.2]],
 ["Morocco",18,11,5,8,"MENA","shoulder",[1.5,1.6,0.7,1.6,0.2,0.7,1.4,6.6,6.1,0.9]],
@@ -370,6 +390,12 @@ function render(){
     ...(incFl?[[usd(f.base.flight*f.fExp), "Round-trip flights from "+origin+" for "+trav+" traveler"+(trav>1?"s":"")]]:[]),
     [MONTHS[month-1], "Seasonal prices applied to lodging, activities and flights"]
   ].map(([b,s])=>`<div class="fact"><b>${b}</b><span>${s}</span></div>`).join("");
+  const CMN=["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+  const cTot=[]; for(let mo=1;mo<=12;mo++){ const ff=forecast(dest,origin,incFl,days,mo,year,style,trav); cTot.push(ff.p90*(1+buf)); }
+  const cHi=Math.max(...cTot), cLo=Math.min(...cTot), cImax=cTot.indexOf(cHi), cImin=cTot.indexOf(cLo), cCur=cTot[month-1];
+  $("bars").innerHTML = cTot.map((v,i)=>`<div class="bar${i===cImin?" min":""}${i===cImax?" max":""}${i===month-1?" sel":""}" title="${CMN[i]}: ${usd(v)}"><div class="col"><i style="height:${Math.max(8,v/cHi*100)}%"></i></div><span>${"JFMAMJJASOND"[i]}</span></div>`).join("");
+  const cSave = cCur-cLo;
+  $("cmpnote").innerHTML = `Suggested budget by month for this trip.<br><span class="lg"><span class="dot" style="background:var(--accent)"></span>Your month: ${CMN[month-1]} ${usd(cCur)}</span><span class="lg"><span class="dot" style="background:var(--c2)"></span>Cheapest: ${CMN[cImin]} ${usd(cLo)}</span><span class="lg"><span class="dot" style="background:var(--c4)"></span>Priciest: ${CMN[cImax]} ${usd(cHi)}</span>` + (cImin!==month-1 ? `<br>Going in ${CMN[cImin]} instead would save about ${usd(cSave)} (${Math.round(cSave/cCur*100)}%).` : `<br>You picked the cheapest month.`);
   const L = tripLinks(dest, origin, days, month, year, trav);
   $("lkflights").hidden = !L.flights;
   if(L.flights){ $("lkflights").href = L.flights; $("lkflights").textContent = `Search flights to ${L.flightCity}`; }
